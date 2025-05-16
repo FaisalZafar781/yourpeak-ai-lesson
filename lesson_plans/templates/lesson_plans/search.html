@@ -39,7 +39,7 @@
     font-size: 2rem;
     color: white;
     text-align: center;
-    margin: 1rem 0;
+    margin-bottom: 1rem;
     text-shadow: 0 0 8px var(--highlight);
   }
 
@@ -333,13 +333,14 @@
 
       <div class="custom-multiselect">
         <div class="select-box" onclick="toggleDropdown('philosophy-dropdown')">
-          <span id="selected-philosophies">Select philosophy</span>
+          <span id="selected-philosophy">Select Philosophy</span>
           <div class="arrow">▼</div>
         </div>
         <div class="dropdown-list" id="philosophy-dropdown">
           {% for philosophy in philosophies %}
             <label>
-              <input type="checkbox" name="philosophies" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophies')">
+
+              <input type="checkbox" name="philosophies" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophy')">
               <span class="checkmark">{% if philosophy.id in selected_philosophy_ids %}✔ {% endif %}</span>{{ philosophy.title }}
             </label>
           {% endfor %}
@@ -478,9 +479,10 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     // Initialize all selection displays
-    updateSelectionDisplay('philosophies');
+
     updateSelectionDisplay('personas');
     updateSelectionDisplay('tones');
+    updateSelectionDisplay('philosophy');
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {

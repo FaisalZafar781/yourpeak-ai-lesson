@@ -109,10 +109,11 @@ def extract_text_from_file(uploaded_file):
 
 
 
+
 def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024-07-18", philosophy_ids=None, persona_ids=None, voice_id=None, tone_ids=None, outputformat_id=None):
 
-    philosophy_ids = philosophy_ids or []
     persona_ids = persona_ids or []
+    philosophy_ids = philosophy_ids or []s
     tone_ids = tone_ids or []
 
 
@@ -159,10 +160,33 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
         for match in search_results.get("matches", [])
     ]
 
-    # Step 4: Honest Mode – no strong matches
-    if not similar_chunks or all(chunk["score"] < 0.45 for chunk in similar_chunks):
+    # # Step 4: Honest Mode – no strong matches
+    # if not similar_chunks or all(chunk["score"] < 0.45 for chunk in similar_chunks):
+    #     return {
+    #         "answer": "🤖 I have no information about this topic.",
+    #         "chunks": []
+    #     }
+    TOP_CHUNK_THRESHOLD_X = 0.65      
+    MINIMAL_RELEVANCE_THRESHOLD_Z = 0.45 
+    MIN_REQUIRED_CHUNKS_N = 2         
+
+    top_chunk_score = 0.0 
+    number_of_chunks_above_Z = 0
+
+    if similar_chunks:
+        top_chunk_score = similar_chunks[0]["score"] 
+
+        for chunk in similar_chunks:
+            if chunk["score"] >= MINIMAL_RELEVANCE_THRESHOLD_Z:
+                number_of_chunks_above_Z += 1
+
+    # Step 4: Honest Mode – no strong matches based on Option B
+
+    if not similar_chunks or \
+       (top_chunk_score < TOP_CHUNK_THRESHOLD_X and \
+        number_of_chunks_above_Z < MIN_REQUIRED_CHUNKS_N):
         return {
-            "answer": "🤖 I have no information about this topic.",
+            "answer": "🤖 I have no information about this topic. Please try rephrasing your query or asking about a different topic. For best results, use more specific keywords related to lesson planning.",
             "chunks": []
         }
 
@@ -178,8 +202,6 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
                     return f.read().strip()
             except Exception as e:
                 return ""
-
-
 
         for philosophy in Philosophy.objects.filter(id__in=philosophy_ids):
             injected_texts.append(f"[PHILOSOPHY]\n{read_file(philosophy)}")
@@ -226,14 +248,22 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
 
 def build_dynamic_prompt(user_query: str, context: str, injected_blocks: str = "") -> str:
     lower_query = user_query.lower()
-    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "activity", "reflection", "ethical note"]
+    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "blog", "email" ,  "activity", "reflection", "ethical note", "detailed", "structured", "overview", "summary", "tone" , "voice", "formatting", "formatting hints"]
 
     if any(word in lower_query for word in format_keywords):
         # Let GPT follow user-specific formatting hints
         return f"""
-{injected_blocks}
 
-Use the context below to generate a structured, lesson-style response in bullet-point format, based on the user's request.
+{injected_blocks}
+Use the context below to answer the user's query while maintaining the original topic. If the user mentions a specific tone or voice (e.g., 'in Zig Ziglar tone'), emulate that tone/style in your writing — **do not change the topic** to focus on the tone or person.
+
+Respond in the structure or format the user has requested.
+
+If the query is illogical, impossible, or out of domain, even if context is provided, respond with:
+"I have no information about this topic. 🤖"
+
+Avoid using any markdown formatting like **bold** or _italic_ in your response.
+
 
 User query: {user_query}
 
@@ -242,13 +272,12 @@ Context:
 
 Answer:"""
 
-    # Default: Bullet-Point Lesson (not slides)
     return f"""
 {injected_blocks}
 
-You are an academic AI assistant that generates concise, well-structured lessons in bullet-point format.
-
-Create a lesson using this structure:
+You are an academic AI assistant that generates concise, well-structured lessons in well-structured format.
+If the query is illogical, impossible, or out of domain, even if context is provided, respond with:
+"I have no information about this topic. 🤖" else Create a lesson using this structure:
 
 ---
 • Key Concept 1

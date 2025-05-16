@@ -25,7 +25,8 @@ MODEL_CHOICES = [
 
 class SearchForm(forms.Form):
     query = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=True)
-    philosophy = forms.ModelMultipleChoiceField(queryset=Philosophy.objects.all(), required=False)
+
+    philosophy = forms.ModelMultipleChoiceField(queryset=Philosophy.objects.all(),required=False)
     personas = forms.ModelMultipleChoiceField(queryset=Persona.objects.all(), required=False)
     voice = forms.ModelChoiceField(queryset=Voice.objects.all(), required=False)
     tone = forms.ModelMultipleChoiceField(queryset=Tone.objects.all(), required=False, widget=forms.CheckboxSelectMultiple)
