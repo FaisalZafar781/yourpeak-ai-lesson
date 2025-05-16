@@ -158,10 +158,33 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
         for match in search_results.get("matches", [])
     ]
 
-    # Step 4: Honest Mode – no strong matches
-    if not similar_chunks or all(chunk["score"] < 0.45 for chunk in similar_chunks):
+    # # Step 4: Honest Mode – no strong matches
+    # if not similar_chunks or all(chunk["score"] < 0.45 for chunk in similar_chunks):
+    #     return {
+    #         "answer": "🤖 I have no information about this topic.",
+    #         "chunks": []
+    #     }
+    TOP_CHUNK_THRESHOLD_X = 0.65      
+    MINIMAL_RELEVANCE_THRESHOLD_Z = 0.45 
+    MIN_REQUIRED_CHUNKS_N = 2         
+
+    top_chunk_score = 0.0 
+    number_of_chunks_above_Z = 0
+
+    if similar_chunks:
+        top_chunk_score = similar_chunks[0]["score"] 
+
+        for chunk in similar_chunks:
+            if chunk["score"] >= MINIMAL_RELEVANCE_THRESHOLD_Z:
+                number_of_chunks_above_Z += 1
+
+    # Step 4: Honest Mode – no strong matches based on Option B
+
+    if not similar_chunks or \
+       (top_chunk_score < TOP_CHUNK_THRESHOLD_X and \
+        number_of_chunks_above_Z < MIN_REQUIRED_CHUNKS_N):
         return {
-            "answer": "🤖 I have no information about this topic.",
+            "answer": "🤖 I have no information about this topic. Please try rephrasing your query or asking about a different topic. For best results, use more specific keywords related to lesson planning.",
             "chunks": []
         }
 
