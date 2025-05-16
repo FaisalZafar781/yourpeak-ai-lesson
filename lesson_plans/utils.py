@@ -31,7 +31,7 @@ index = pc.Index(PINECONE_INDEX)
 # Get tokenizer for the model
 tokenizer = tiktoken.encoding_for_model("text-embedding-3-large")
 
-def chunk_text(text, max_tokens=1000):
+def chunk_text(text, max_tokens=500):
     tokens = tokenizer.encode(text)
     chunks = []
     start = 0
