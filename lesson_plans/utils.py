@@ -109,10 +109,10 @@ def extract_text_from_file(uploaded_file):
 
 
 
-def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024-07-18", philosophy_id=None, persona_ids=None, voice_id=None, tone_ids=None):
+def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024-07-18", philosophy_ids=None, persona_ids=None, voice_id=None, tone_ids=None):
     
     persona_ids = persona_ids or []
-    
+    philosophy_ids = philosophy_ids or []
     tone_ids = tone_ids or []
     
     system_message = """
@@ -178,8 +178,9 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
             except Exception as e:
                 return ""
 
-        if philosophy_id:
-            injected_texts.append(f"[PHILOSOPHY]\n{read_file(Philosophy.objects.get(id=philosophy_id))}")
+        for philosophy in Philosophy.objects.filter(id__in=philosophy_ids):
+            injected_texts.append(f"[PHILOSOPHY]\n{read_file(philosophy)}")
+
             
         for persona in Persona.objects.filter(id__in=persona_ids):
             injected_texts.append(f"[PERSONA]\n{read_file(persona)}")
@@ -220,14 +221,22 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
 
 def build_dynamic_prompt(user_query: str, context: str, injected_blocks: str = "") -> str:
     lower_query = user_query.lower()
-    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "activity", "reflection", "ethical note"]
+    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "blog", "email" ,  "activity", "reflection", "ethical note", "detailed", "structured", "overview", "summary", "tone" , "voice", "formatting", "formatting hints"]
 
     if any(word in lower_query for word in format_keywords):
         # Let GPT follow user-specific formatting hints
         return f"""
-{injected_blocks}
 
-Use the context below to generate a structured, lesson-style response in bullet-point format, based on the user's request.
+{injected_blocks}
+Use the context below to answer the user's query while maintaining the original topic. If the user mentions a specific tone or voice (e.g., 'in Zig Ziglar tone'), emulate that tone/style in your writing — **do not change the topic** to focus on the tone or person.
+
+Respond in the structure or format the user has requested.
+
+If the query is illogical, impossible, or out of domain, even if context is provided, respond with:
+"I have no information about this topic. 🤖"
+
+Avoid using any markdown formatting like **bold** or _italic_ in your response.
+
 
 User query: {user_query}
 
@@ -236,13 +245,12 @@ Context:
 
 Answer:"""
 
-    # Default: Bullet-Point Lesson (not slides)
     return f"""
 {injected_blocks}
 
-You are an academic AI assistant that generates concise, well-structured lessons in bullet-point format.
-
-Create a lesson using this structure:
+You are an academic AI assistant that generates concise, well-structured lessons in well-structured format.
+If the query is illogical, impossible, or out of domain, even if context is provided, respond with:
+"I have no information about this topic. 🤖" else Create a lesson using this structure:
 
 ---
 • Key Concept 1  

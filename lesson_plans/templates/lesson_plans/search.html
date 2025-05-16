@@ -39,7 +39,7 @@
     font-size: 2rem;
     color: white;
     text-align: center;
-    margin: 1rem 0;
+    margin-bottom: 1rem;
     text-shadow: 0 0 8px var(--highlight);
   }
 
@@ -330,12 +330,21 @@
         <option value="gpt-4-turbo-2024-04-09" {% if selected_model == "gpt-4-turbo-2024-04-09" %}selected{% endif %}>GPT-4 Turbo</option>
       </select>
 
-      <select name="philosophy">
-        <option value="">Philosophy</option>
-        {% for philosophy in philosophies %}
-          <option value="{{ philosophy.id }}" {% if philosophy.id|stringformat:"s" == selected_philosophy_id %}selected{% endif %}>{{ philosophy.title }}</option>
-        {% endfor %}
-      </select>
+      <div class="custom-multiselect">
+        <div class="select-box" onclick="toggleDropdown('philosophy-dropdown')">
+          <span id="selected-philosophy">Select Philosophy</span>
+          <div class="arrow">▼</div>
+        </div>
+        <div class="dropdown-list" id="philosophy-dropdown">
+          {% for philosophy in philosophies %}
+            <label>
+              <input type="checkbox" name="philosophies" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophy')">
+              <span class="checkmark">{% if philosophy.id in selected_philosophy_ids %}✔ {% endif %}</span>{{ philosophy.title }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
 
       <div class="custom-multiselect">
         <div class="select-box" onclick="toggleDropdown('persona-dropdown')">
@@ -462,6 +471,7 @@
     // Initialize all selection displays
     updateSelectionDisplay('personas');
     updateSelectionDisplay('tones');
+    updateSelectionDisplay('philosophy');
     
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {
