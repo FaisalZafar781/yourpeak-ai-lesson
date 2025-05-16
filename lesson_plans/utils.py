@@ -113,7 +113,7 @@ def extract_text_from_file(uploaded_file):
 def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024-07-18", philosophy_ids=None, persona_ids=None, voice_id=None, tone_ids=None, outputformat_id=None):
 
     persona_ids = persona_ids or []
-    philosophy_ids = philosophy_ids or []s
+    philosophy_ids = philosophy_ids or []
     tone_ids = tone_ids or []
 
 
