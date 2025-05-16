@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.shortcuts import render, redirect
 from .forms import DocumentUploadForm, SearchForm, MODEL_CHOICES
-from .models import Document, Philosophy, Persona, Voice, Tone, ChatMessage, ChatSession, UserProfile
+from .models import Document, Philosophy, Persona, Voice, Tone, ChatMessage, ChatSession, UserProfile, OutputFormat
 from .utils import extract_text_from_file, store_document_in_pinecone, search_similar_chunks
 from pinecone import Pinecone, ServerlessSpec
 from django.shortcuts import redirect, get_object_or_404
@@ -18,7 +18,7 @@ index_name = "lesson-index"
 
 if index_name not in pc.list_indexes().names():
     pc.create_index(
-        name=index_name, 
+        name=index_name,
         dimension=3072,
         metric='cosine',
         spec=ServerlessSpec(cloud='aws', region='us-east-1')
@@ -27,11 +27,11 @@ index = pc.Index(index_name)
 
 def upload_document(request):
     if not request.user.is_authenticated:
-        return redirect('login')  
+        return redirect('login')
 
     try:
         profile = UserProfile.objects.get(user=request.user)
-        if profile.role != 'admin':  
+        if profile.role != 'admin':
             return redirect('home_screen')
     except UserProfile.DoesNotExist:
         return redirect('home_screen')
@@ -40,9 +40,9 @@ def upload_document(request):
         if form.is_valid():
             document = form.save(commit=False)
             uploaded_file = request.FILES['file']
-            
+
             try:
-                
+
                 content = extract_text_from_file(uploaded_file)
                 document.content = content
                 document.save()
@@ -76,7 +76,7 @@ def semantic_search(query):
 
     for doc in docs:
         score = SequenceMatcher(None, query.lower(), doc.text.lower()).ratio()
-        if score > 0.3:  
+        if score > 0.3:
             results.append({
                 'text': doc.text,
                 'score': score
@@ -111,7 +111,7 @@ def search_view(request):
         if profile.role not in ['admin', 'client']:
             return redirect('home_screen')
     except UserProfile.DoesNotExist:
-        return redirect('home_screen') 
+        return redirect('home_screen')
     form = SearchForm(request.GET or None)
     results, answer = [], None
     selected_ids = {
@@ -119,9 +119,10 @@ def search_view(request):
         "persona_ids": [],
         "voice_id": None,
         "tone_ids": [],
+        "outputformat_id": None,
         "model": "gpt-4o-mini-2024-07-18",
     }
-    
+
     chat_id = request.GET.get("chat_id")
     new_chat_requested = request.GET.get("new_chat")
 
@@ -133,14 +134,14 @@ def search_view(request):
 
 
             is_empty_chat = (
-                chat_session.messages.count() == 0 and 
+                chat_session.messages.count() == 0 and
                 not chat_session.title
             )
-            
+
             # If user requested a new chat but is already in an empty one, just stay here
             if new_chat_requested and is_empty_chat:
                 return redirect(f"/search/?chat_id={chat_session.id}")
-            
+
         except ChatSession.DoesNotExist:
             # chat_session = ChatSession.objects.create()
             chat_session = ChatSession.objects.create(user=request.user)
@@ -167,6 +168,7 @@ def search_view(request):
         selected_ids["persona_ids"] = list(map(int, request.GET.getlist("personas")))
         selected_ids["voice_id"] = form.cleaned_data.get("voice").id if form.cleaned_data.get("voice") else None
         selected_ids["tone_ids"] = [tone.id for tone in form.cleaned_data.get("tones")] if form.cleaned_data.get("tones") else []
+        selected_ids["outputformat_id"] = form.cleaned_data.get("outputformat").id if form.cleaned_data.get("outputformat") else None
         selected_ids["model"] = form.cleaned_data.get("model") or selected_ids["model"]
 
         user_msg = ChatMessage.objects.create(session=chat_session, role="user", content=query)
@@ -180,7 +182,7 @@ def search_view(request):
 
         try:
             result_data = search_similar_chunks(query, top_k=5, use_gpt=True, **selected_ids)
-            
+
             if isinstance(result_data, dict):
                 answer = result_data.get("answer")
                 results = result_data.get("chunks", [])
@@ -198,6 +200,7 @@ def search_view(request):
                 "personas": Persona.objects.all(),
                 "voices": Voice.objects.all(),
                 "tones": Tone.objects.all(),
+                "outputformats": OutputFormat.objects.all(),
                 "chat_id": chat_id,
                 "messages": ChatMessage.objects.filter(session=chat_session),
                 # "sessions": ChatSession.objects.all(),
@@ -214,6 +217,7 @@ def search_view(request):
         "personas": Persona.objects.all(),
         "voices": Voice.objects.all(),
         "tones": Tone.objects.all(),
+        "outputformats": OutputFormat.objects.all(),
         "chat_id": chat_id,
         "messages": ChatMessage.objects.filter(session=chat_session),
         # "sessions": ChatSession.objects.all(),
@@ -221,6 +225,6 @@ def search_view(request):
         "selected_philosophy_ids": selected_ids.get("philosophy_ids", []),
         "selected_persona_ids": selected_ids.get("persona_ids", []),
         **selected_ids
-    }    
-        
+    }
+
     return render(request, "lesson_plans/search.html", context)

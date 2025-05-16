@@ -9,14 +9,14 @@ class Document(models.Model):
     tags = models.ManyToManyField('Tag', blank=True)
 
     def __str__(self):
-        return self.file.name 
+        return self.file.name
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.name
-    
+
 
 class Philosophy(models.Model):
     title = models.CharField(max_length=255)
@@ -65,6 +65,16 @@ class Tone(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class OutputFormat(models.Model):
+    title = models.CharField(max_length=255)
+    file = models.FileField(upload_to='prompt_module/output_format/')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
 
 # class ChatSession(models.Model):
 #     title = models.CharField(max_length=255, blank=True)

@@ -4,7 +4,7 @@ import os
 from pinecone import Pinecone, ServerlessSpec
 from django.conf import settings
 from decouple import config
-from lesson_plans.models import Persona, Philosophy, Voice, Tone
+from lesson_plans.models import Persona, Philosophy, Voice, Tone, OutputFormat
 
 # Load API keys from environment or settings
 OPENAI_API_KEY = config('OPENAI_API_KEY')
@@ -54,10 +54,10 @@ def embed_text_chunks(chunks):
     return embeddings
 
 def store_document_in_pinecone(document):
-    text = document.content    
+    text = document.content
     # Get chunks
     chunks = chunk_text(text)
-    
+
     # Create embeddings
     try:
         embedded_chunks = embed_text_chunks(chunks)
@@ -65,12 +65,12 @@ def store_document_in_pinecone(document):
         raise
 
     tags = [tag.name for tag in document.tags.all()]
-    
+
     # Store each chunk as a vector in Pinecone
     for i, (chunk, embedding) in enumerate(embedded_chunks):
         try:
             vector_id = f"{document.id}-{i}"
-            
+
             result = index.upsert(vectors=[{
                 "id": vector_id,
                 "values": embedding,
@@ -83,7 +83,7 @@ def store_document_in_pinecone(document):
             }])
         except Exception as e:
             raise
-    
+
 
 def extract_text_from_file(uploaded_file):
     name = uploaded_file.name
@@ -91,13 +91,13 @@ def extract_text_from_file(uploaded_file):
 
     if ext == '.txt':
         return uploaded_file.read().decode('utf-8', errors='ignore')
-    
+
     elif ext == '.docx':
         import docx
         from io import BytesIO
         doc = docx.Document(BytesIO(uploaded_file.read()))
         return '\n'.join([p.text for p in doc.paragraphs])
-    
+
     elif ext == '.pdf':
         import PyPDF2
         from io import BytesIO
@@ -109,12 +109,14 @@ def extract_text_from_file(uploaded_file):
 
 
 
-def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024-07-18", philosophy_ids=None, persona_ids=None, voice_id=None, tone_ids=None):
-    
+
+def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024-07-18", philosophy_ids=None, persona_ids=None, voice_id=None, tone_ids=None, outputformat_id=None):
+
     persona_ids = persona_ids or []
-    philosophy_ids = philosophy_ids or []
+    philosophy_ids = philosophy_ids or []s
     tone_ids = tone_ids or []
-    
+
+
     system_message = """
     You are a deep-reasoning, high-clarity model.
     Your core behavior is to reason slowly, carefully, and systematically through all tasks and questions before producing any output.
@@ -204,18 +206,20 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
         for philosophy in Philosophy.objects.filter(id__in=philosophy_ids):
             injected_texts.append(f"[PHILOSOPHY]\n{read_file(philosophy)}")
 
-            
         for persona in Persona.objects.filter(id__in=persona_ids):
             injected_texts.append(f"[PERSONA]\n{read_file(persona)}")
-            
+
         if voice_id:
             injected_texts.append(f"[VOICE]\n{read_file(Voice.objects.get(id=voice_id))}")
-            
+
         for tone in Tone.objects.filter(id__in=tone_ids):
             injected_texts.append(f"[TONE]\n{read_file(tone)}")
 
+        if outputformat_id:
+            injected_texts.append(f"[OUTPUTFORMAT]\n{read_file(OutputFormat.objects.get(id=outputformat_id))}")
+
         final_prompt = build_dynamic_prompt(user_query=query, context=context, injected_blocks="\n\n".join(injected_texts))
-        
+
         try:
             response = openai_client.chat.completions.create(
                 model=model,
@@ -276,11 +280,11 @@ If the query is illogical, impossible, or out of domain, even if context is prov
 "I have no information about this topic. 🤖" else Create a lesson using this structure:
 
 ---
-• Key Concept 1  
-• Key Concept 2  
-• Supporting Detail  
-• Real-World Application  
-• Bonus Insight or Caution  
+• Key Concept 1
+• Key Concept 2
+• Supporting Detail
+• Real-World Application
+• Bonus Insight or Caution
 
 Wrap up with a brief summary.
 Remove all markdown formatting like **bold** or _italic_ in the response
