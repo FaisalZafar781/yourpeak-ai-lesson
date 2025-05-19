@@ -242,7 +242,7 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
 
 def build_dynamic_prompt(user_query: str, context: str, injected_blocks: str = "") -> str:
     lower_query = user_query.lower()
-    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "blog", "email" ,  "activity", "reflection", "ethical note", "detailed", "structured", "overview", "summary", "tone" , "voice", "formatting", "formatting hints"]
+    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "blog", "email" ,  "activity", "reflection", "ethical note", "detailed", "structured", "overview", "summary", "tone" , "voice", "formatting", "strategy"]
 
     if any(word in lower_query for word in format_keywords):
         # Let GPT follow user-specific formatting hints
@@ -254,7 +254,7 @@ Use the context below to answer the user's query while maintaining the original 
 Respond in the structure or format the user has requested.
 
 If the query is illogical, impossible, or out of domain, even if context is provided, respond with:
-"I have no information about this topic. 🤖"
+"I have no information about this topic. Please try rephrasing your query or asking about a different topic. 🤖"
 
 Avoid using any markdown formatting like **bold** or _italic_ in your response.
 
@@ -271,7 +271,7 @@ Answer:"""
 
 You are an academic AI assistant that generates concise, well-structured lessons in well-structured format.
 If the query is illogical, impossible, or out of domain, even if context is provided, respond with:
-"I have no information about this topic. 🤖" else Create a lesson using this structure:
+"I have no information about this topic. Please try rephrasing your query or asking about a different topic. 🤖" else Create a lesson using this structure:
 
 ---
 • Key Concept 1
