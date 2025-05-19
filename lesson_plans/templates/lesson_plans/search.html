@@ -341,7 +341,7 @@
               {% for philosophy in philosophies %}
                 <label>
 
-                  <input type="checkbox" name="philosophies" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophy')">
+                  <input type="checkbox" name="philosophy" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophy')">
                   <span class="checkmark">{% if philosophy.id in selected_philosophy_ids %}✔ {% endif %}</span>{{ philosophy.title }}
                 </label>
               {% endfor %}

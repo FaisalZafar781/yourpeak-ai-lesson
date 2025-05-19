@@ -160,12 +160,7 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
         for match in search_results.get("matches", [])
     ]
 
-    # # Step 4: Honest Mode – no strong matches
-    # if not similar_chunks or all(chunk["score"] < 0.45 for chunk in similar_chunks):
-    #     return {
-    #         "answer": "🤖 I have no information about this topic.",
-    #         "chunks": []
-    #     }
+
     TOP_CHUNK_THRESHOLD_X = 0.65      
     MINIMAL_RELEVANCE_THRESHOLD_Z = 0.45 
     MIN_REQUIRED_CHUNKS_N = 2         
@@ -190,7 +185,6 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
             "chunks": []
         }
 
-    # Step 5: GPT Response (Optional)
     if use_gpt:
         context = "\n\n".join([f"- {chunk['text']}" for chunk in similar_chunks])
 
