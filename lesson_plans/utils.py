@@ -192,7 +192,7 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
 
         def read_file(model_instance):
             try:
-                with model_instance.file.open("r") as f:
+                with model_instance.file.open("r", encoding="utf-8") as f:
                     return f.read().strip()
             except Exception as e:
                 return ""
@@ -222,7 +222,7 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
                     {"role": "user", "content": final_prompt.strip()}
                 ],
                 temperature=0.5,
-                max_tokens=1000
+                max_tokens=1200
             )
             answer = response.choices[0].message.content.strip()
 
@@ -242,7 +242,7 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
 
 def build_dynamic_prompt(user_query: str, context: str, injected_blocks: str = "") -> str:
     lower_query = user_query.lower()
-    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "blog", "email" ,  "activity", "reflection", "ethical note", "detailed", "structured", "overview", "summary", "tone" , "voice", "formatting", "strategy"]
+    format_keywords = ["slide", "quiz", "bullet", "assignment", "speaker note", "ppt", "presentation", "pdf", "format", "document", "lesson plan", "blog", "email",  "activity", "reflection", "ethical note", "detailed", "structured", "overview", "summary", "tone" , "voice", "formatting", "strategy"]
 
     if any(word in lower_query for word in format_keywords):
         # Let GPT follow user-specific formatting hints

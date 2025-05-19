@@ -75,18 +75,6 @@ class OutputFormat(models.Model):
     def __str__(self):
         return self.title
 
-
-# class ChatSession(models.Model):
-#     title = models.CharField(max_length=255, blank=True)
-#     created_at = models.DateTimeField(default=timezone.now)
-
-#     def __str__(self):
-#         return self.title if self.title else f"Chat {self.pk}"
-
-#     class Meta:
-#         ordering = ['-created_at']
-
-
 class ChatSession(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_sessions')
     title = models.CharField(max_length=255, blank=True)
