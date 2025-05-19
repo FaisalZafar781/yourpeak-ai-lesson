@@ -5,12 +5,8 @@ from lesson_plans.models import UserProfile
 user = User.objects.get(username='admin')
 UserProfile.objects.get_or_create(user=user, defaults={'role': 'admin'})
 
-# For user 'snake'
-user = User.objects.get(username='snake')
-UserProfile.objects.get_or_create(user=user, defaults={'role': 'client'})
-
 # For user 'user'
-user = User.objects.get(username='user')
+user = User.objects.get(username='client')
 UserProfile.objects.get_or_create(user=user, defaults={'role': 'client'})
 
 # from pinecone import Pinecone, ServerlessSpec
