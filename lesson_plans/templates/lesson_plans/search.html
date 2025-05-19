@@ -26,6 +26,11 @@
     height: 100%;
   }
 
+  .main-body {
+    display: flex;
+    justify-content: flex-start;
+  }
+
   .container {
     display: flex;
     flex-direction: column;
@@ -39,7 +44,7 @@
     font-size: 2rem;
     color: white;
     text-align: center;
-    margin-bottom: 1rem;
+    margin: 1rem;
     text-shadow: 0 0 8px var(--highlight);
   }
 
@@ -54,7 +59,7 @@
   .message {
     background-color: var(--card);
     border-radius: 12px;
-    padding: 1.25rem;
+    padding: 1rem;
     margin-bottom: 1rem;
     box-shadow: 0 0 10px var(--shadow);
     white-space: pre-line;
@@ -67,7 +72,7 @@
     background-color: #25283b;
     border-bottom-right-radius: 0;
     margin-left: auto;
-    text-align: right;
+    text-align: left;
   }
 
   .assistant {
@@ -81,7 +86,7 @@
 
   .input-area {
     background-color: #1a1c2d;
-    padding: 1rem;
+    padding: 0.5rem;
     border-top: 1px solid #333;
     box-shadow: 0 -2px 10px var(--shadow);
   }
@@ -256,38 +261,152 @@
     background-color: #555;
     color: white;
   }
-  .input-area-con{
-    max-width: 1080px;
+
+  .active-chat {
+    max-width: 74rem;
+    width: 100%;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
   }
-  @media (max-width: 1550px) {
-    .input-area-con {
-      width: 1000px;
-      margin-left: 290px;
-      margin-right: 20px;
+
+  .chat-columns {
+    display: flex;
+    flex-direction: column;
+    flex-basis: auto;
+    flex-grow: 1;
+    overflow: auto;
   }
-  }
+
 </style>
 
-<div style="position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background-color: #1a1c2d; padding: 1rem; overflow-y: auto; border-right: 1px solid #333; margin-top: 60px ">
-  <h3 style="color: white; margin-bottom: 1rem;">💬 GPT</h3>
+<div class="main-body h-100">
+  <div class="">
+    <div class="chat-history">
+      <h3 style="color: white; margin-bottom: 1rem;">💬 GPT</h3>
 
-  <a href="?new_chat=1" style="display: block; background-color: var(--highlight); color: white; text-align: center; padding: 0.5rem; margin-bottom: 1rem; border-radius: 8px; text-decoration: none;">+ New Chat</a>
+      <a href="?new_chat=1" style="display: block; background-color: var(--highlight); color: white; text-align: center; padding: 0.5rem; margin-bottom: 1rem; border-radius: 8px; text-decoration: none;">+ New Chat</a>
 
-  {% for session in sessions %}
-    <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; margin-bottom: 0.5rem; background-color: {% if session.id|stringformat:"s" == chat_id|stringformat:"s" %}#2a2d40{% else %}transparent{% endif %}; border-radius: 6px;">
-      <a href="?chat_id={{ session.id }}" style="color: white; text-decoration: none; font-size: 0.85rem; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-        {{ session.title|default:"Chat " }}{{ forloop.counter }}
-      </a>
-      <button type="button" class="delete-button"
-              onclick="confirmDelete('{{ session.id }}', '{{ session.title|default:"Chat"|addslashes }}')"
-              title="Delete Chat"
-              style="background: none; border: none; color: #aaa; cursor: pointer;">🗑️</button>
+      {% for session in sessions %}
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; margin-bottom: 0.5rem; background-color: {% if session.id|stringformat:"s" == chat_id|stringformat:"s" %}#2a2d40{% else %}transparent{% endif %}; border-radius: 6px;">
+          <a href="?chat_id={{ session.id }}" style="color: white; text-decoration: none; font-size: 0.85rem; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            {{ session.title|default:"Chat " }}{{ forloop.counter }}
+          </a>
+          <button type="button" class="delete-button"
+                  onclick="confirmDelete('{{ session.id }}', '{{ session.title|default:"Chat"|addslashes }}')"
+                  title="Delete Chat"
+                  style="background: none; border: none; color: #aaa; cursor: pointer;">🗑️</button>
+        </div>
+      {% empty %}
+        <p style="color: #aaa;">No chats yet</p>
+      {% endfor %}
     </div>
-  {% empty %}
-    <p style="color: #aaa;">No chats yet</p>
-  {% endfor %}
+    <div class="grow"></div>
+  </div>
+
+  <div class="active-chat">
+    <div class="chat-columns">
+      <h2>✨ Lesson Planner</h2>
+
+      <div class="chat" id="chat-area">
+        {% for msg in messages %}
+          <div class="message {{ msg.role }}">
+            <strong>{{ msg.role|title }}:</strong><br>
+            {{ msg.content|linebreaksbr }}
+          </div>
+        {% endfor %}
+        <div id="loader" class="message assistant" style="display: none;">
+          <em>⏳ Generating your lesson, please wait...</em>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="input-area-con">
+      <div class="input-area">
+        <form method="get" onsubmit="return showLoader()" class="toolbar-form">
+          <select name="model">
+            <option value="gpt-4o-mini-2024-07-18" {% if selected_model == "gpt-4o-mini-2024-07-18" %}selected{% endif %}>GPT-4o Mini (Default)</option>
+            <option value="gpt-4o-2024-08-06" {% if selected_model == "gpt-4o-2024-08-06" %}selected{% endif %}>GPT-4o</option>
+            <option value="gpt-4-turbo-2024-04-09" {% if selected_model == "gpt-4-turbo-2024-04-09" %}selected{% endif %}>GPT-4 Turbo</option>
+          </select>
+
+
+          <div class="custom-multiselect">
+            <div class="select-box" onclick="toggleDropdown('philosophy-dropdown')">
+              <span id="selected-philosophy">Select Philosophy</span>
+              <div class="arrow">▼</div>
+            </div>
+            <div class="dropdown-list" id="philosophy-dropdown">
+              {% for philosophy in philosophies %}
+                <label>
+
+                  <input type="checkbox" name="philosophies" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophy')">
+                  <span class="checkmark">{% if philosophy.id in selected_philosophy_ids %}✔ {% endif %}</span>{{ philosophy.title }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="custom-multiselect">
+            <div class="select-box" onclick="toggleDropdown('persona-dropdown')">
+              <span id="selected-personas">Select Personas</span>
+              <div class="arrow">▼</div>
+            </div>
+            <div class="dropdown-list" id="persona-dropdown">
+              {% for persona in personas %}
+                <label>
+                  <input type="checkbox" name="personas" value="{{ persona.id }}" {% if persona.id in selected_persona_ids %}checked{% endif %} onchange="updateSelectionDisplay('personas')">
+                  <span class="checkmark">{% if persona.id in selected_persona_ids %}✔ {% endif %}</span>{{ persona.title }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <select name="voice">
+            <option value="">Voice</option>
+            {% for voice in voices %}
+              <option value="{{ voice.id }}" {% if voice.id|stringformat:"s" == selected_voice_id %}selected{% endif %}>{{ voice.title }}</option>
+            {% endfor %}
+          </select>
+
+          <!-- New Custom Multiselect for Tones -->
+          <div class="custom-multiselect">
+            <div class="select-box" onclick="toggleDropdown('tone-dropdown')">
+              <span id="selected-tones">Select Tones</span>
+              <div class="arrow">▼</div>
+            </div>
+            <div class="dropdown-list" id="tone-dropdown">
+              {% for tone in tones %}
+                <label>
+                  <input type="checkbox" name="tones" value="{{ tone.id }}" {% if tone.id in selected_tone_ids %}checked{% endif %} onchange="updateSelectionDisplay('tones')" class="tone-checkbox">
+                  <span class="checkmark">{% if tone.id in selected_tone_ids %}✔ {% endif %}</span>{{ tone.title }}
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+
+          <select name="outputformat" style="display: inline-flex;">
+            <option value="">Output Format</option>
+            {% for outputformat in outputformats %}
+              <option value="{{ outputformat.id }}" {% if outputformat.id|stringformat:"s" == selected_outputformat_id %}selected{% endif %}>{{ outputformat.title }}</option>
+            {% endfor %}
+          </select>
+
+
+          <input type="hidden" name="chat_id" value="{{ chat_id|default:'' }}">
+
+          <div class="submit-wrapper">
+            <textarea name="query" id="query-input" placeholder="Enter a lesson topic..." required>{{ query }}</textarea>
+            <button type="submit">➤</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 </div>
+
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="modal">
@@ -301,106 +420,6 @@
         <button type="submit" class="modal-button confirm-button">Delete</button>
       </form>
     </div>
-  </div>
-</div>
-
-<div class="container chatBox">
-  <h2>✨ Lesson Planner</h2>
-
-  <div class="chat" id="chat-area">
-    {% for msg in messages %}
-      <div class="message {{ msg.role }}">
-        <strong>{{ msg.role|title }}:</strong><br>
-        {{ msg.content|linebreaksbr }}
-      </div>
-    {% endfor %}
-    <div id="loader" class="message assistant" style="display: none;">
-      <em>⏳ Generating your lesson, please wait...</em>
-    </div>
-  </div>
-</div>
-
-
-<div class="input-area-con">
-  <div class="input-area">
-    <form method="get" onsubmit="return showLoader()" class="toolbar-form">
-      <select name="model">
-        <option value="gpt-4o-mini-2024-07-18" {% if selected_model == "gpt-4o-mini-2024-07-18" %}selected{% endif %}>GPT-4o Mini (Default)</option>
-        <option value="gpt-4o-2024-08-06" {% if selected_model == "gpt-4o-2024-08-06" %}selected{% endif %}>GPT-4o</option>
-        <option value="gpt-4-turbo-2024-04-09" {% if selected_model == "gpt-4-turbo-2024-04-09" %}selected{% endif %}>GPT-4 Turbo</option>
-      </select>
-
-
-      <div class="custom-multiselect">
-        <div class="select-box" onclick="toggleDropdown('philosophy-dropdown')">
-          <span id="selected-philosophy">Select Philosophy</span>
-          <div class="arrow">▼</div>
-        </div>
-        <div class="dropdown-list" id="philosophy-dropdown">
-          {% for philosophy in philosophies %}
-            <label>
-
-              <input type="checkbox" name="philosophies" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophy')">
-              <span class="checkmark">{% if philosophy.id in selected_philosophy_ids %}✔ {% endif %}</span>{{ philosophy.title }}
-            </label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <div class="custom-multiselect">
-        <div class="select-box" onclick="toggleDropdown('persona-dropdown')">
-          <span id="selected-personas">Select Personas</span>
-          <div class="arrow">▼</div>
-        </div>
-        <div class="dropdown-list" id="persona-dropdown">
-          {% for persona in personas %}
-            <label>
-              <input type="checkbox" name="personas" value="{{ persona.id }}" {% if persona.id in selected_persona_ids %}checked{% endif %} onchange="updateSelectionDisplay('personas')">
-              <span class="checkmark">{% if persona.id in selected_persona_ids %}✔ {% endif %}</span>{{ persona.title }}
-            </label>
-          {% endfor %}
-        </div>
-      </div>
-
-      <select name="voice">
-        <option value="">Voice</option>
-        {% for voice in voices %}
-          <option value="{{ voice.id }}" {% if voice.id|stringformat:"s" == selected_voice_id %}selected{% endif %}>{{ voice.title }}</option>
-        {% endfor %}
-      </select>
-
-      <!-- New Custom Multiselect for Tones -->
-      <div class="custom-multiselect">
-        <div class="select-box" onclick="toggleDropdown('tone-dropdown')">
-          <span id="selected-tones">Select Tones</span>
-          <div class="arrow">▼</div>
-        </div>
-        <div class="dropdown-list" id="tone-dropdown">
-          {% for tone in tones %}
-            <label>
-              <input type="checkbox" name="tones" value="{{ tone.id }}" {% if tone.id in selected_tone_ids %}checked{% endif %} onchange="updateSelectionDisplay('tones')" class="tone-checkbox">
-              <span class="checkmark">{% if tone.id in selected_tone_ids %}✔ {% endif %}</span>{{ tone.title }}
-            </label>
-          {% endfor %}
-        </div>
-      </div>
-
-
-      <select name="outputformat" style="display: inline-flex;">
-        <option value="">Output Format</option>
-        {% for outputformat in outputformats %}
-          <option value="{{ outputformat.id }}" {% if outputformat.id|stringformat:"s" == selected_outputformat_id %}selected{% endif %}>{{ outputformat.title }}</option>
-        {% endfor %}
-      </select>
-
-
-      <input type="hidden" name="chat_id" value="{{ chat_id|default:'' }}">
-
-      <div class="submit-wrapper">
-        <textarea name="query" id="query-input" placeholder="Enter a lesson topic..." required>{{ query }}</textarea>
-        <button type="submit">➤</button>
-      </div>
-    </form>
   </div>
 </div>
 
