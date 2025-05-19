@@ -164,7 +164,7 @@ def search_view(request):
 
     if request.method == 'GET' and form.is_valid() and 'query' in request.GET:
         query = form.cleaned_data['query']
-        selected_ids["philosophy_ids"] = list(map(int, request.GET.getlist("philosophy")))
+        selected_ids["philosophy_ids"] = list(map(int, request.GET.getlist("philosophies")))
         selected_ids["persona_ids"] = list(map(int, request.GET.getlist("personas")))
         selected_ids["voice_id"] = form.cleaned_data.get("voice").id if form.cleaned_data.get("voice") else None
         selected_ids["tone_ids"] = [tone.id for tone in form.cleaned_data.get("tones")] if form.cleaned_data.get("tones") else []

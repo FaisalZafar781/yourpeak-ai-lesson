@@ -334,14 +334,14 @@
 
           <div class="custom-multiselect">
             <div class="select-box" onclick="toggleDropdown('philosophy-dropdown')">
-              <span id="selected-philosophy">Select Philosophy</span>
+              <span id="selected-philosophies">Select Philosophy</span>
               <div class="arrow">▼</div>
             </div>
             <div class="dropdown-list" id="philosophy-dropdown">
               {% for philosophy in philosophies %}
                 <label>
 
-                  <input type="checkbox" name="philosophy" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophy')">
+                  <input type="checkbox" name="philosophies" value="{{ philosophy.id }}" {% if philosophy.id in selected_philosophy_ids %}checked{% endif %} onchange="updateSelectionDisplay('philosophies')">
                   <span class="checkmark">{% if philosophy.id in selected_philosophy_ids %}✔ {% endif %}</span>{{ philosophy.title }}
                 </label>
               {% endfor %}
@@ -501,7 +501,7 @@
 
     updateSelectionDisplay('personas');
     updateSelectionDisplay('tones');
-    updateSelectionDisplay('philosophy');
+    updateSelectionDisplay('philosophies');
 
     // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {
