@@ -2,11 +2,10 @@ from openai import OpenAI
 import tiktoken
 import os
 from pinecone import Pinecone, ServerlessSpec
-from django.conf import settings
 from decouple import config
 from lesson_plans.models import Persona, Philosophy, Voice, Tone, OutputFormat
 
-# Load API keys from environment or settings
+# Load API keys from environment
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 PINECONE_KEY = config('PINECONE_API_KEY')
 PINECONE_ENV = os.getenv("yourpeak-gpt", "us-east-1")
