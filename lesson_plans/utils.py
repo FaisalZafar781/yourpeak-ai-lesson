@@ -9,8 +9,8 @@ from lesson_plans.models import Persona, Philosophy, Voice, Tone, OutputFormat
 # Load API keys from environment or settings
 OPENAI_API_KEY = config('OPENAI_API_KEY')
 PINECONE_KEY = config('PINECONE_API_KEY')
-PINECONE_ENV = os.getenv("lesson-waever", "us-east-1")
-PINECONE_INDEX = "lesson-index"
+PINECONE_ENV = os.getenv("yourpeak-gpt", "us-east-1")
+PINECONE_INDEX = "yourpeak-gpt"
 
 # Initialize OpenAI client
 openai_client = OpenAI(api_key=OPENAI_API_KEY)

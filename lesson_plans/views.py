@@ -14,7 +14,7 @@ PINECONE_API_KEY = config('PINECONE_API_KEY')
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
 
-index_name = "lesson-index"
+index_name = "yourpeak-gpt"
 
 if index_name not in pc.list_indexes().names():
     pc.create_index(

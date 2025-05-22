@@ -14,7 +14,7 @@ UserProfile.objects.get_or_create(user=user, defaults={'role': 'client'})
 
 # pc = Pinecone(api_key="")
 
-# index_name = "lesson-index"
+# index_name = "yourpeak-gpt"
 
 # pc.create_index(
 #         name=index_name, 
