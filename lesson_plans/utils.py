@@ -162,11 +162,10 @@ def search_similar_chunks(query, top_k=5, use_gpt=False, model="gpt-4o-mini-2024
 
     TOP_CHUNK_THRESHOLD_X = 0.65      
     MINIMAL_RELEVANCE_THRESHOLD_Z = 0.45 
-    MIN_REQUIRED_CHUNKS_N = 2         
+    MIN_REQUIRED_CHUNKS_N = 2
 
     top_chunk_score = 0.0 
     number_of_chunks_above_Z = 0
-
     if similar_chunks:
         top_chunk_score = similar_chunks[0]["score"] 
 

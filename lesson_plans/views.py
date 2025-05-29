@@ -1,7 +1,7 @@
-from django.conf import settings
 from django.shortcuts import render, redirect
 from .forms import DocumentUploadForm, SearchForm, MODEL_CHOICES
-from .models import Document, Philosophy, Persona, Voice, Tone, ChatMessage, ChatSession, UserProfile, OutputFormat
+from .forms import TagForm, PhilosophyUploadForm, PersonaUploadForm, VoiceUploadForm, ToneUploadForm, OutputFormatUploadForm
+from .models import Document, Philosophy, Persona, Voice, Tone, ChatMessage, ChatSession, UserProfile, OutputFormat, Tag
 from .utils import extract_text_from_file, store_document_in_pinecone, search_similar_chunks
 from pinecone import Pinecone, ServerlessSpec
 from django.shortcuts import redirect, get_object_or_404
@@ -9,6 +9,11 @@ from django.views.decorators.csrf import csrf_protect
 from decouple import config
 from django.urls import reverse
 from urllib.parse import urlencode
+from django.http import HttpResponseForbidden, HttpResponseBadRequest, HttpResponse, FileResponse, Http404
+import os
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
 PINECONE_API_KEY = config('PINECONE_API_KEY')
 pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -24,6 +29,181 @@ if index_name not in pc.list_indexes().names():
         spec=ServerlessSpec(cloud='aws', region='us-east-1')
     )
 index = pc.Index(index_name)
+
+def admin_dashboard_view(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        if profile.role != 'admin':
+            return redirect('home_screen')
+    except UserProfile.DoesNotExist:
+        return redirect('home_screen')
+    # Initialize forms
+    tag_form = TagForm()
+    philosophy_form = PhilosophyUploadForm()
+    persona_form = PersonaUploadForm()
+    voice_form = VoiceUploadForm()
+    tone_form = ToneUploadForm()
+    format_form = OutputFormatUploadForm()
+
+    if request.method == 'POST':
+        if 'upload_tag' in request.POST:
+            tag_form = TagForm(request.POST)
+            if tag_form.is_valid():
+                tag_form.save()
+                messages.success(request, "Tag added.")
+                return redirect('admin_dashboard')
+
+        elif 'upload_philosophy' in request.POST:
+            philosophy_form = PhilosophyUploadForm(request.POST, request.FILES)
+            if philosophy_form.is_valid():
+                philosophy_form.save()
+                messages.success(request, "Philosophy uploaded.")
+                return redirect('admin_dashboard')
+
+        elif 'upload_persona' in request.POST:
+            persona_form = PersonaUploadForm(request.POST, request.FILES)
+            if persona_form.is_valid():
+                persona_form.save()
+                messages.success(request, "Persona uploaded.")
+                return redirect('admin_dashboard')
+
+        elif 'upload_voice' in request.POST:
+            voice_form = VoiceUploadForm(request.POST, request.FILES)
+            if voice_form.is_valid():
+                voice_form.save()
+                messages.success(request, "Voice uploaded.")
+                return redirect('admin_dashboard')
+
+        elif 'upload_tone' in request.POST:
+            tone_form = ToneUploadForm(request.POST, request.FILES)
+            if tone_form.is_valid():
+                tone_form.save()
+                messages.success(request, "Tone uploaded.")
+                return redirect('admin_dashboard')
+
+        elif 'upload_format' in request.POST:
+            format_form = OutputFormatUploadForm(request.POST, request.FILES)
+            if format_form.is_valid():
+                format_form.save()
+                messages.success(request, "Output format uploaded.")
+                return redirect('admin_dashboard')
+
+    users = UserProfile.objects.select_related('user').all()
+
+    philosophy_files = Philosophy.objects.all()
+    persona_files = Persona.objects.all()
+    voice_files = Voice.objects.all()
+    tone_files = Tone.objects.all()
+    format_files = OutputFormat.objects.all()
+    tags = Tag.objects.all()
+
+    context = {
+        'users': users,
+        'tag_form': tag_form,
+        'philosophy_form': philosophy_form,
+        'persona_form': persona_form,
+        'voice_form': voice_form,
+        'tone_form': tone_form,
+        'format_form': format_form,
+        'philosophy_files': philosophy_files,
+        'persona_files': persona_files,
+        'voice_files': voice_files,
+        'tone_files': tone_files,
+        'format_files': format_files,
+        'tags': tags,
+    }
+    return render(request, 'lesson_plans/admin-dashboard.html', context)
+
+
+@require_POST
+@login_required
+def update_user_role(request):
+    user_profile = UserProfile.objects.get(user=request.user)
+    if user_profile.role != 'admin':
+        return HttpResponseForbidden("You are not authorized to perform this action.")
+
+    user_id = request.POST.get('user_id')
+    new_role = request.POST.get('new_role')
+
+    try:
+        target_profile = UserProfile.objects.get(user__id=user_id)
+        target_profile.role = new_role
+        target_profile.save()
+        messages.success(request, f"{target_profile.user.username}'s role updated to {new_role}.")
+    except UserProfile.DoesNotExist:
+        messages.error(request, "User not found.")
+
+    return redirect('admin_dashboard')
+
+
+MODEL_MAP = {
+    'philosophy': Philosophy,
+    'persona': Persona,
+    'voice': Voice,
+    'tone': Tone,
+    'outputformat': OutputFormat,
+    'tag': Tag,
+}
+
+@login_required
+def delete_file(request, model, file_id):
+    if request.method == 'POST':
+        model_class = MODEL_MAP.get(model.lower())
+        if not model_class:
+            return HttpResponseBadRequest("Invalid model type.")
+
+        try:
+            file_obj = model_class.objects.get(id=file_id)
+
+            # If object has an `uploaded_by` field, restrict deletion
+            if hasattr(file_obj, 'uploaded_by') and file_obj.uploaded_by != request.user:
+                return HttpResponseForbidden("You do not have permission to delete this item.")
+
+            # Always delete the database object
+            file_obj.delete()
+        except model_class.DoesNotExist:
+            pass
+
+    return redirect('admin_dashboard')
+
+@login_required
+def view_file(request, model, file_id):
+    Model = MODEL_MAP.get(model.lower())
+    if not Model:
+        return HttpResponse("Invalid model type.", status=400)
+
+    try:
+        file_obj = Model.objects.get(id=file_id)
+        file_path = file_obj.file.path
+        ext = os.path.splitext(file_path)[1].lower()
+
+        if ext in ['.txt', '.md', '.csv', '.json']:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            return HttpResponse(f"<pre>{content}</pre>")
+        else:
+            return HttpResponse("This file type is not viewable as plain text.", status=415)
+
+    except Model.DoesNotExist:
+        return HttpResponse("File not found.", status=404)
+
+@login_required
+def download_file(request, category, file_id):
+    Model = MODEL_MAP.get(category)
+    if not Model:
+        raise Http404("Invalid category")
+
+    try:
+        obj = Model.objects.get(id=file_id)
+        file_path = obj.file.path
+        file_name = os.path.basename(file_path)
+        return FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)
+    except (Model.DoesNotExist, FileNotFoundError):
+        raise Http404("File not found")
+
 
 def upload_document(request):
     if not request.user.is_authenticated:

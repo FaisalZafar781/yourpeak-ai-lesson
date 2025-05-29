@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 
 class SignUpForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput)
-    # role = forms.ChoiceField(choices=UserProfile.ROLE_CHOICES)
 
     class Meta:
         model = User

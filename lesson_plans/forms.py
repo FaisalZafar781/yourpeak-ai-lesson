@@ -32,3 +32,40 @@ class SearchForm(forms.Form):
     tone = forms.ModelMultipleChoiceField(queryset=Tone.objects.all(), required=False, widget=forms.CheckboxSelectMultiple)
     outputformat = forms.ModelChoiceField(queryset=OutputFormat.objects.all(), required=False)
     model = forms.ChoiceField(choices=MODEL_CHOICES, required=False, initial='gpt-4o-mini-2024-07-18')
+
+
+
+class PhilosophyUploadForm(forms.ModelForm):
+    class Meta:
+        model = Philosophy
+        fields = ['title', 'file', 'is_global']
+
+
+class PersonaUploadForm(forms.ModelForm):
+    class Meta:
+        model = Persona
+        fields = ['title', 'file']
+
+
+class VoiceUploadForm(forms.ModelForm):
+    class Meta:
+        model = Voice
+        fields = ['title', 'file']
+
+
+class ToneUploadForm(forms.ModelForm):
+    class Meta:
+        model = Tone
+        fields = ['title', 'file']
+
+
+class OutputFormatUploadForm(forms.ModelForm):
+    class Meta:
+        model = OutputFormat
+        fields = ['title', 'file']
+
+
+class TagForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+        fields = ['name']
