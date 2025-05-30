@@ -15,12 +15,23 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.role}"
 class Document(models.Model):
+    title = models.CharField(max_length=255, blank=True)
     file = models.FileField(upload_to='documents/')
     content = models.TextField(blank=True)
     tags = models.ManyToManyField('Tag', blank=True)
 
     def __str__(self):
-        return self.file.name
+        return self.title or self.file.name  # Fallback to file name if title is missing
+
+# models.py
+class PineconeDocument(models.Model):
+    document = models.ForeignKey(Document, on_delete=models.CASCADE)  # Assuming you already have a Document model
+    title = models.CharField(max_length=255)
+    tag_names = models.JSONField(default=list)  # Store list of tag names
+    vector_ids = models.JSONField()             # Store list of vector IDs uploaded to Pinecone
+    chunk_count = models.IntegerField()
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True)

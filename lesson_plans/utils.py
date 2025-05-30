@@ -3,7 +3,7 @@ import tiktoken
 import os
 from pinecone import Pinecone, ServerlessSpec
 from decouple import config
-from lesson_plans.models import Persona, Philosophy, Voice, Tone, OutputFormat
+from lesson_plans.models import Persona, Philosophy, Voice, Tone, OutputFormat, PineconeDocument, Tag
 
 # Load API keys from environment
 OPENAI_API_KEY = config('OPENAI_API_KEY')
@@ -54,27 +54,28 @@ def embed_text_chunks(chunks):
 
 def store_document_in_pinecone(document):
     text = document.content
-    # Get chunks
     chunks = chunk_text(text)
 
-    # Create embeddings
     try:
         embedded_chunks = embed_text_chunks(chunks)
     except Exception as e:
         raise
 
     tags = [tag.name for tag in document.tags.all()]
+    vector_ids = []  # ✅ Track uploaded vector IDs
 
-    # Store each chunk as a vector in Pinecone
     for i, (chunk, embedding) in enumerate(embedded_chunks):
-        try:
-            vector_id = f"{document.id}-{i}"
+        vector_id = f"{document.id}-{i}"
+        vector_ids.append(vector_id)  # ✅ Store it
 
-            result = index.upsert(vectors=[{
+        try:
+            print("Uploading document:", document.title)
+            index.upsert(vectors=[{
                 "id": vector_id,
                 "values": embedding,
                 "metadata": {
                     "document_id": str(document.id),
+                    "document_title": document.title,
                     "chunk_index": i,
                     "tags": tags,
                     "text": chunk
@@ -82,6 +83,16 @@ def store_document_in_pinecone(document):
             }])
         except Exception as e:
             raise
+
+    # ✅ Save metadata locally
+    PineconeDocument.objects.create(
+        document=document,
+        title=document.title,
+        tag_names=tags,
+        vector_ids=vector_ids,
+        chunk_count=len(vector_ids)
+    )
+
 
 
 def extract_text_from_file(uploaded_file):

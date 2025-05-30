@@ -2,6 +2,15 @@ from django import forms
 from .models import Document, Tag, Philosophy, Persona, Voice, Tone, OutputFormat
 
 class DocumentUploadForm(forms.ModelForm):
+    title = forms.CharField(
+        max_length=255,
+        required=False,  # optional if you use auto-fill fallback
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Enter document title',
+            'class': 'form-control'
+        })
+    )
+
     tags = forms.ModelMultipleChoiceField(
         queryset=Tag.objects.all(),
         widget=forms.SelectMultiple(attrs={
@@ -13,7 +22,7 @@ class DocumentUploadForm(forms.ModelForm):
 
     class Meta:
         model = Document
-        fields = ['file', 'tags']
+        fields = ['title', 'file', 'tags']
 
 
 MODEL_CHOICES = [

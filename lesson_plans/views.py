@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect
 from .forms import DocumentUploadForm, SearchForm, MODEL_CHOICES
 from .forms import TagForm, PhilosophyUploadForm, PersonaUploadForm, VoiceUploadForm, ToneUploadForm, OutputFormatUploadForm
-from .models import Document, Philosophy, Persona, Voice, Tone, ChatMessage, ChatSession, UserProfile, OutputFormat, Tag
+from .models import Document, Philosophy, Persona, Voice, Tone, ChatMessage, ChatSession, UserProfile, OutputFormat, Tag, PineconeDocument
 from .utils import extract_text_from_file, store_document_in_pinecone, search_similar_chunks
-from pinecone import Pinecone, ServerlessSpec
+from pinecone import Pinecone, ServerlessSpec, PineconeApiException
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_protect
 from decouple import config
@@ -41,6 +41,7 @@ def admin_dashboard_view(request):
     except UserProfile.DoesNotExist:
         return redirect('home_screen')
     # Initialize forms
+    pinecone_docs = PineconeDocument.objects.select_related('document').all()
     tag_form = TagForm()
     philosophy_form = PhilosophyUploadForm()
     persona_form = PersonaUploadForm()
@@ -99,7 +100,7 @@ def admin_dashboard_view(request):
     tone_files = Tone.objects.all()
     format_files = OutputFormat.objects.all()
     tags = Tag.objects.all()
-
+    pinecone_docs = PineconeDocument.objects.all().order_by('-uploaded_at')
     context = {
         'users': users,
         'tag_form': tag_form,
@@ -114,6 +115,7 @@ def admin_dashboard_view(request):
         'tone_files': tone_files,
         'format_files': format_files,
         'tags': tags,
+        'pinecone_documents': pinecone_docs,
     }
     return render(request, 'lesson_plans/admin-dashboard.html', context)
 
@@ -204,6 +206,25 @@ def download_file(request, category, file_id):
     except (Model.DoesNotExist, FileNotFoundError):
         raise Http404("File not found")
 
+@login_required
+def delete_pinecone_document(request, doc_id):
+    if request.method == 'POST':
+        pinecone_doc = get_object_or_404(PineconeDocument, id=doc_id)
+
+        try:
+            # Delete vectors from Pinecone
+            vector_ids = pinecone_doc.vector_ids
+            index.delete(ids=vector_ids)
+
+            # Delete local records
+            pinecone_doc.document.delete()  # Also deletes the related PineconeDocument due to CASCADE
+            messages.success(request, "Document and its vectors were deleted successfully.")
+        except PineconeApiException as e:
+            messages.error(request, f"Pinecone API error: {str(e)}")
+        except Exception as e:
+            messages.error(request, f"Error: {str(e)}")
+
+    return redirect('admin_dashboard')
 
 def upload_document(request):
     if not request.user.is_authenticated:
