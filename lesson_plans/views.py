@@ -40,7 +40,6 @@ def admin_dashboard_view(request):
             return redirect('home_screen')
     except UserProfile.DoesNotExist:
         return redirect('home_screen')
-    # Initialize forms
     pinecone_docs = PineconeDocument.objects.select_related('document').all()
     tag_form = TagForm()
     philosophy_form = PhilosophyUploadForm()
@@ -160,11 +159,9 @@ def delete_file(request, model, file_id):
         try:
             file_obj = model_class.objects.get(id=file_id)
 
-            # If object has an `uploaded_by` field, restrict deletion
             if hasattr(file_obj, 'uploaded_by') and file_obj.uploaded_by != request.user:
                 return HttpResponseForbidden("You do not have permission to delete this item.")
 
-            # Always delete the database object
             file_obj.delete()
         except model_class.DoesNotExist:
             pass
@@ -212,12 +209,9 @@ def delete_pinecone_document(request, doc_id):
         pinecone_doc = get_object_or_404(PineconeDocument, id=doc_id)
 
         try:
-            # Delete vectors from Pinecone
             vector_ids = pinecone_doc.vector_ids
             index.delete(ids=vector_ids)
-
-            # Delete local records
-            pinecone_doc.document.delete()  # Also deletes the related PineconeDocument due to CASCADE
+            pinecone_doc.document.delete()
             messages.success(request, "Document and its vectors were deleted successfully.")
         except PineconeApiException as e:
             messages.error(request, f"Pinecone API error: {str(e)}")
@@ -243,18 +237,32 @@ def upload_document(request):
             uploaded_file = request.FILES['file']
 
             try:
-
                 content = extract_text_from_file(uploaded_file)
+                tag_section_start = content.find("Tags:")
+                if tag_section_start != -1:
+                    tag_line_end = content.find("\n", tag_section_start)
+                    if tag_line_end == -1:
+                        tag_line_end = len(content)
+                    
+                    tag_line = content[tag_section_start:tag_line_end].strip()
+                    tag_section = tag_line[len("Tags:"):].strip()
+                    tags = [tag.strip() for tag in tag_section.split(",") if tag.strip()]
+                    
+                    content = (
+                        content[:tag_section_start].strip() + 
+                        "\n\n" +
+                        content[tag_line_end:].strip()
+                    )
+
                 document.content = content
                 document.save()
                 form.save_m2m()
 
                 try:
-                    store_document_in_pinecone(document)
+                    store_document_in_pinecone(document , tags)
                     base_url = reverse('upload_document')
                     query_string = urlencode({'success': '1'})
                     return redirect(f"{base_url}?{query_string}")
-                    # return redirect('document_list')
                 except Exception as e:
                     return render(request, 'lesson_plans/upload_document.html', {
                         'form': form,
@@ -292,11 +300,9 @@ def delete_chat(request, chat_id):
         return redirect('login')
 
     if request.method == 'POST':
-        # Only fetch chats owned by the logged-in user
         chat = get_object_or_404(ChatSession, id=chat_id, user=request.user)
         chat.delete()
 
-    # Redirect to remaining chats owned by the same user
     remaining_chat = ChatSession.objects.filter(user=request.user).first()
     if remaining_chat:
         return redirect(f"/search/?chat_id={remaining_chat.id}")
@@ -327,24 +333,17 @@ def search_view(request):
     chat_id = request.GET.get("chat_id")
     new_chat_requested = request.GET.get("new_chat")
 
-    # Chat session handling
     if chat_id:
         try:
-            # chat_session = ChatSession.objects.get(id=chat_id)
             chat_session = get_object_or_404(ChatSession, id=chat_id, user=request.user)
-
-
             is_empty_chat = (
                 chat_session.messages.count() == 0 and
                 not chat_session.title
             )
-
-            # If user requested a new chat but is already in an empty one, just stay here
             if new_chat_requested and is_empty_chat:
                 return redirect(f"/search/?chat_id={chat_session.id}")
 
         except ChatSession.DoesNotExist:
-            # chat_session = ChatSession.objects.create()
             chat_session = ChatSession.objects.create(user=request.user)
             return redirect(f"/search/?chat_id={chat_session.id}")
     elif new_chat_requested:
@@ -388,9 +387,6 @@ def search_view(request):
                 answer = result_data.get("answer")
                 results = result_data.get("chunks", [])
 
-                assistant_msg = ChatMessage.objects.create(session=chat_session, role="assistant", content=answer)
-                print("[DEBUG] Created assistant message:", assistant_msg.id)
-
         except Exception as e:
             return render(request, "lesson_plans/search.html", {
                 "form": form,
@@ -404,7 +400,6 @@ def search_view(request):
                 "outputformats": OutputFormat.objects.all(),
                 "chat_id": chat_id,
                 "messages": ChatMessage.objects.filter(session=chat_session),
-                # "sessions": ChatSession.objects.all(),
                 "sessions": ChatSession.objects.filter(user=request.user),
                 **selected_ids
             })
@@ -421,7 +416,6 @@ def search_view(request):
         "outputformats": OutputFormat.objects.all(),
         "chat_id": chat_id,
         "messages": ChatMessage.objects.filter(session=chat_session),
-        # "sessions": ChatSession.objects.all(),
         "sessions": ChatSession.objects.filter(user=request.user),
         "selected_philosophy_ids": selected_ids.get("philosophy_ids", []),
         "selected_persona_ids": selected_ids.get("persona_ids", []),
