@@ -52,7 +52,7 @@ def embed_text_chunks(chunks):
         embeddings.append((chunk, embedding))
     return embeddings
 
-def store_document_in_pinecone(document):
+def store_document_in_pinecone(document, tags):
     text = document.content
     chunks = chunk_text(text)
 
@@ -60,16 +60,11 @@ def store_document_in_pinecone(document):
         embedded_chunks = embed_text_chunks(chunks)
     except Exception as e:
         raise
-
-    tags = [tag.name for tag in document.tags.all()]
-    vector_ids = []  # ✅ Track uploaded vector IDs
-
+    vector_ids = []
     for i, (chunk, embedding) in enumerate(embedded_chunks):
         vector_id = f"{document.id}-{i}"
-        vector_ids.append(vector_id)  # ✅ Store it
-
+        vector_ids.append(vector_id)
         try:
-            print("Uploading document:", document.title)
             index.upsert(vectors=[{
                 "id": vector_id,
                 "values": embedding,
@@ -84,7 +79,6 @@ def store_document_in_pinecone(document):
         except Exception as e:
             raise
 
-    # ✅ Save metadata locally
     PineconeDocument.objects.create(
         document=document,
         title=document.title,

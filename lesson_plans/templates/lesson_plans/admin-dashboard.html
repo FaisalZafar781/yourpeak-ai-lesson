@@ -227,43 +227,6 @@
   </div>
 </section>
 
-  <!-- Tag Management Section -->
-  <section class="upload-section">
-    <h2 class="section-title">Tag Management</h2>
-    <div class="full-width-section">
-      <div>
-        <p class="text-gray-400 mb-4">Create and manage tags for organizing content across the system.</p>
-        <form method="POST" class="form-grid">
-          {% csrf_token %}
-          <div class="form-field">
-            <label for="{{ tag_form.name.id_for_label }}">Tag Name</label>
-            {{ tag_form.name|add_class:"select-dark w-full" }}
-          </div>
-          <button type="submit" name="upload_tag" class="btn-primary">Add Tag</button>
-        </form>
-      </div>
-         <div class="bg-gray-800 p-4 rounded-lg w-full">
-      <h3 class="text-lg font-medium text-theme mb-3">Uploaded Tags</h3>
-      <div class="max-h-96 overflow-y-auto space-y-2 pr-2" style="max-height: 200px;">
-      <ul class="space-y-2 text-sm text-gray-300">
-        {% for file in tags %}
-          <li class="flex justify-between items-center bg-gray-700 p-2 rounded">
-            <span>{{ file.name }}</span>
-            <!-- Delete button placeholder -->
-            <form method="POST" action="{% url 'delete_file' 'tag' file.id %}" onsubmit="return confirm('Delete this Tag?');">
-              {% csrf_token %}
-              <button type="submit" class="text-red-400 hover:text-red-600">Delete</button>
-            </form>
-          </li>
-        {% empty %}
-          <li class="text-gray-500">No files uploaded yet.</li>
-        {% endfor %}
-      </ul>
-    </div>
-    </div>
-    </div>
-  </section>
-
   <!-- Philosophy Management Section -->
 <section class="upload-section">
   <h2 class="section-title">Philosophy Management</h2>
